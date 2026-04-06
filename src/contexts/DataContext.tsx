@@ -97,16 +97,25 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const generateSummary = (meetingId: string) => {
+    const meeting = meetings.find(m => m.id === meetingId);
+    if (!meeting) return;
+
+    const contribText = meeting.contributions.length > 0
+      ? meeting.contributions.map(c => `• ${c.participantName}: "${c.content}"`).join('\n')
+      : 'No se registraron aportes escritos.';
+    const filesText = meeting.files.length > 0
+      ? meeting.files.map(f => `📄 ${f.name} (${f.size}, subido por ${f.uploadedBy})`).join('\n')
+      : 'No se adjuntaron documentos.';
+
+    const summary = `Resumen integral generado por IA:\n\n` +
+      `📋 Reunión: "${meeting.title}" — ${meeting.date}\n` +
+      `👥 Participantes: ${meeting.participants.map(p => p.name).join(', ') || 'Sin participantes registrados'}\n\n` +
+      `📝 Aportes recibidos:\n${contribText}\n\n` +
+      `📎 Documentación adjunta:\n${filesText}\n\n` +
+      `📌 Conclusión: Se abordaron los temas de agenda con participación activa. Los aportes reflejan consensos parciales y se identificaron áreas que requieren seguimiento en próximas sesiones.`;
+
     setMeetings(prev =>
-      prev.map(m =>
-        m.id === meetingId
-          ? {
-              ...m,
-              summary:
-                'Resumen generado por IA: Durante la reunión se abordaron los temas principales de la agenda. Los participantes expresaron diversas perspectivas y se alcanzaron consensos parciales en los puntos clave. Se definieron acciones de seguimiento para la próxima sesión.',
-            }
-          : m
-      )
+      prev.map(m => m.id === meetingId ? { ...m, summary } : m)
     );
   };
 
