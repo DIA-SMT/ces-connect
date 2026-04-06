@@ -85,13 +85,96 @@ const MeetingDetail = () => {
         </Card>
       )}
 
-      <Tabs defaultValue="contributions" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
+      <Tabs defaultValue="debate" className="space-y-4">
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="debate" className="text-xs sm:text-sm"><MessageSquare className="w-3.5 h-3.5 mr-1.5 hidden sm:inline" />Debate</TabsTrigger>
           <TabsTrigger value="contributions" className="text-xs sm:text-sm"><FileText className="w-3.5 h-3.5 mr-1.5 hidden sm:inline" />Aportes</TabsTrigger>
           <TabsTrigger value="participants" className="text-xs sm:text-sm"><Users className="w-3.5 h-3.5 mr-1.5 hidden sm:inline" />Participantes</TabsTrigger>
           <TabsTrigger value="files" className="text-xs sm:text-sm"><Upload className="w-3.5 h-3.5 mr-1.5 hidden sm:inline" />Archivos</TabsTrigger>
           <TabsTrigger value="ai" className="text-xs sm:text-sm"><Brain className="w-3.5 h-3.5 mr-1.5 hidden sm:inline" />IA</TabsTrigger>
         </TabsList>
+
+        {/* Debate - unified feed */}
+        <TabsContent value="debate" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Tablero de debate</CardTitle>
+              <CardDescription>Todo lo que los participantes escribieron y subieron en esta reunión</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {meeting.contributions.length === 0 && meeting.files.length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-8">Aún no hay actividad en esta reunión.</p>
+              )}
+
+              {/* Unified timeline: contributions + files sorted by time */}
+              {[
+                ...meeting.contributions.map(c => ({
+                  type: 'contribution' as const,
+                  id: c.id,
+                  author: c.participantName,
+                  content: c.content,
+                  time: c.timestamp,
+                })),
+                ...meeting.files.map(f => ({
+                  type: 'file' as const,
+                  id: f.id,
+                  author: f.uploadedBy,
+                  content: f.name,
+                  time: f.uploadedAt,
+                  size: f.size,
+                })),
+              ]
+                .sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime())
+                .map(item => (
+                  <div key={item.id} className="flex gap-3 border rounded-lg p-3">
+                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      {item.type === 'contribution'
+                        ? <MessageSquare className="w-4 h-4 text-primary" />
+                        : <Paperclip className="w-4 h-4 text-primary" />
+                      }
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-medium text-sm">{item.author}</span>
+                        <Badge variant="secondary" className="text-[10px] flex-shrink-0">
+                          {item.type === 'contribution' ? 'Texto' : 'Archivo'}
+                        </Badge>
+                      </div>
+                      {item.type === 'contribution' ? (
+                        <p className="text-sm text-muted-foreground mt-1">{item.content}</p>
+                      ) : (
+                        <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
+                          <FileText className="w-3.5 h-3.5" />
+                          <span>{item.content}</span>
+                          {'size' in item && <span className="text-xs">({(item as any).size})</span>}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+            </CardContent>
+          </Card>
+
+          {/* Quick add contribution + file from debate tab */}
+          <Card>
+            <CardHeader><CardTitle className="text-base">Participar en el debate</CardTitle></CardHeader>
+            <CardContent className="space-y-3">
+              <Input placeholder="Tu nombre" value={contributorName} onChange={e => setContributorName(e.target.value)} />
+              <Textarea placeholder="Escribí tu aporte al debate..." value={newContribution} onChange={e => setNewContribution(e.target.value)} rows={3} />
+              <div className="flex gap-2">
+                <Button onClick={handleAddContribution} disabled={!newContribution || !contributorName}>
+                  <Send className="w-4 h-4 mr-2" />Enviar
+                </Button>
+                <Label htmlFor="debate-file-upload" className="cursor-pointer">
+                  <Button variant="outline" asChild>
+                    <span><Paperclip className="w-4 h-4 mr-2" />Adjuntar archivo</span>
+                  </Button>
+                </Label>
+                <Input id="debate-file-upload" type="file" className="hidden" accept=".pdf,.doc,.docx,.txt" onChange={handleFileUpload} />
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         {/* Contributions */}
         <TabsContent value="contributions" className="space-y-4">
