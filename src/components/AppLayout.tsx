@@ -10,11 +10,11 @@ const AppLayout = ({ children }: { children: ReactNode }) => {
   const location = useLocation();
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-50 border-b border-border/50 bg-card/80 backdrop-blur-md">
-        <div className="container flex h-16 items-center justify-between">
+    <div className="min-h-screen bg-transparent">
+      <header className="sticky top-4 z-50 mx-4 sm:mx-8 mt-4 rounded-2xl glass-card">
+        <div className="container flex h-16 items-center justify-between px-4 sm:px-6">
           <button onClick={() => navigate('/')} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-            <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-primary/10">
+            <div className="flex items-center justify-center w-10 h-10 rounded-2xl bg-white/50 shadow-sm border border-white/60">
               <Landmark className="w-5 h-5 text-primary" />
             </div>
             <div className="leading-none">
