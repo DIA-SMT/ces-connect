@@ -1,96 +1,174 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useData } from '@/contexts/DataContext';
 import { categories } from '@/lib/mock-data';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { CalendarDays, Plus, ArrowLeft, Users, ArrowRight } from 'lucide-react';
+import { CalendarDays, Plus, ArrowLeft, Users, ArrowRight, Clock, CheckCircle2, LayoutList } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useState } from 'react';
+
+type FilterType = 'all' | 'upcoming' | 'completed';
+
+const filters: { key: FilterType; label: string; icon: typeof LayoutList }[] = [
+  { key: 'all', label: 'Todas', icon: LayoutList },
+  { key: 'upcoming', label: 'Próximas', icon: Clock },
+  { key: 'completed', label: 'Anteriores', icon: CheckCircle2 },
+];
 
 const CategoryPage = () => {
   const { categoryId } = useParams();
   const navigate = useNavigate();
   const { getMeetingsByCategory, addMeeting } = useData();
   const category = categories.find(c => c.id === categoryId);
-  const meetings = getMeetingsByCategory(categoryId || '');
+  const allMeetings = getMeetingsByCategory(categoryId || '');
 
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState('');
   const [date, setDate] = useState('');
   const [description, setDescription] = useState('');
+  const [filter, setFilter] = useState<FilterType>('all');
 
   if (!category) return <p>Categoría no encontrada</p>;
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!title || !date) return;
-    addMeeting({ title, date, category: categoryId!, description });
+    await addMeeting({ title, date, category: categoryId!, description });
     setTitle(''); setDate(''); setDescription('');
     setOpen(false);
   };
 
+  const filteredMeetings = allMeetings.filter(m => {
+    if (filter === 'all') return true;
+    return m.status === filter;
+  });
+
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center gap-3">
-        <Button variant="ghost" size="icon" onClick={() => navigate('/')}>
+        <Button variant="ghost" size="icon" onClick={() => navigate('/')} className="rounded-xl">
           <ArrowLeft className="w-4 h-4" />
         </Button>
         <div>
-          <h1 className="text-2xl font-bold">{category.title}</h1>
-          <p className="text-sm text-muted-foreground">{category.description}</p>
+          <h1 className="text-2xl font-bold text-slate-800 dark:text-white">{category.title}</h1>
+          <p className="text-sm text-slate-500 mt-0.5">{category.description}</p>
         </div>
       </div>
 
-      <div className="flex justify-end">
+      {/* Filter Bar + New Button */}
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        {/* Filter pills */}
+        <div className="glass-card rounded-2xl p-1.5 flex gap-1">
+          {filters.map(f => {
+            const Icon = f.icon;
+            const count = f.key === 'all'
+              ? allMeetings.length
+              : allMeetings.filter(m => m.status === f.key).length;
+            const active = filter === f.key;
+            return (
+              <button
+                key={f.key}
+                onClick={() => setFilter(f.key)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                  active
+                    ? 'bg-primary text-white shadow-sm'
+                    : 'text-slate-600 hover:bg-white/60 dark:text-white/70'
+                }`}
+              >
+                <Icon className="w-3.5 h-3.5" />
+                {f.label}
+                <span className={`text-xs font-bold px-1.5 py-0.5 rounded-full ${
+                  active ? 'bg-white/20' : 'bg-slate-100 text-slate-500 dark:bg-white/10 dark:text-white/60'
+                }`}>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* New meeting button */}
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button><Plus className="w-4 h-4 mr-2" />Nueva reunión</Button>
+            <Button className="rounded-xl gap-2">
+              <Plus className="w-4 h-4" />
+              Nueva reunión
+            </Button>
           </DialogTrigger>
-          <DialogContent>
-            <DialogHeader><DialogTitle>Crear reunión</DialogTitle></DialogHeader>
+          <DialogContent className="glass-card border-white/60 rounded-3xl">
+            <DialogHeader>
+              <DialogTitle className="text-slate-800">Crear reunión</DialogTitle>
+            </DialogHeader>
             <div className="space-y-4 pt-2">
-              <div className="space-y-2">
-                <Label>Título</Label>
-                <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="Título de la reunión" />
+              <div className="space-y-1.5">
+                <Label className="text-slate-700">Título</Label>
+                <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="Título de la reunión" className="rounded-xl" />
               </div>
-              <div className="space-y-2">
-                <Label>Fecha</Label>
-                <Input type="date" value={date} onChange={e => setDate(e.target.value)} />
+              <div className="space-y-1.5">
+                <Label className="text-slate-700">Fecha</Label>
+                <Input type="date" value={date} onChange={e => setDate(e.target.value)} className="rounded-xl" />
               </div>
-              <div className="space-y-2">
-                <Label>Descripción</Label>
-                <Textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Descripción..." />
+              <div className="space-y-1.5">
+                <Label className="text-slate-700">Descripción</Label>
+                <Textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Descripción de la reunión..." className="rounded-xl" />
               </div>
-              <Button onClick={handleCreate} className="w-full">Crear reunión</Button>
+              <Button onClick={handleCreate} className="w-full rounded-xl">Crear reunión</Button>
             </div>
           </DialogContent>
         </Dialog>
       </div>
 
-      {meetings.length === 0 ? (
-        <Card><CardContent className="py-12 text-center text-muted-foreground">No hay reuniones en esta comisión aún.</CardContent></Card>
+      {/* Meetings list */}
+      {filteredMeetings.length === 0 ? (
+        <div className="glass-card rounded-2xl p-12 text-center">
+          <div className="text-4xl mb-3">
+            {filter === 'upcoming' ? '📅' : filter === 'completed' ? '✅' : '📋'}
+          </div>
+          <p className="text-slate-500 font-medium">
+            {filter === 'upcoming' && 'No hay reuniones próximas en esta comisión.'}
+            {filter === 'completed' && 'No hay reuniones anteriores en esta comisión.'}
+            {filter === 'all' && 'No hay reuniones en esta comisión aún.'}
+          </p>
+        </div>
       ) : (
         <div className="grid gap-3">
-          {meetings.map(m => (
-            <Card key={m.id} className="cursor-pointer hover:shadow-sm transition-all hover:border-primary/20" onClick={() => navigate(`/meeting/${m.id}`)}>
-              <CardContent className="flex items-center justify-between py-4">
-                <div className="space-y-1">
-                  <p className="font-medium text-sm">{m.title}</p>
-                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1"><CalendarDays className="w-3 h-3" />{format(new Date(m.date), "d 'de' MMMM, yyyy", { locale: es })}</span>
-                    <span className="flex items-center gap-1"><Users className="w-3 h-3" />{m.participants.length} participantes</span>
-                    <Badge variant={m.status === 'completed' ? 'secondary' : 'default'} className="text-xs">{m.status === 'completed' ? 'Finalizada' : 'Próxima'}</Badge>
+          {filteredMeetings.map(m => (
+            <div
+              key={m.id}
+              className="glass-card rounded-2xl cursor-pointer hover:shadow-md transition-all group"
+              onClick={() => navigate(`/meeting/${m.id}`)}
+            >
+              <div className="flex items-center justify-between p-4 sm:px-6">
+                <div className="space-y-1.5">
+                  <p className="font-semibold text-slate-800 dark:text-white">{m.title}</p>
+                  <div className="flex items-center gap-3 text-sm text-slate-500 flex-wrap">
+                    <span className="flex items-center gap-1.5">
+                      <CalendarDays className="w-3.5 h-3.5" />
+                      {format(new Date(m.date), "d 'de' MMMM, yyyy", { locale: es })}
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <Users className="w-3.5 h-3.5" />
+                      {m.participants.length} participantes
+                    </span>
+                    <span className={`glass-pill px-3 py-0.5 rounded-full text-xs font-semibold ${
+                      m.status === 'completed'
+                        ? 'text-slate-500'
+                        : 'text-primary'
+                    }`}>
+                      {m.status === 'completed' ? 'Finalizada' : 'Próxima'}
+                    </span>
                   </div>
-                  {m.summary && <p className="text-xs text-muted-foreground line-clamp-1 mt-1">{m.summary}</p>}
+                  {m.summary && (
+                    <p className="text-xs text-slate-400 line-clamp-1 mt-1">{m.summary}</p>
+                  )}
                 </div>
-                <ArrowRight className="w-4 h-4 text-muted-foreground" />
-              </CardContent>
-            </Card>
+                <ArrowRight className="w-5 h-5 text-slate-400 group-hover:text-primary transition-colors flex-shrink-0 ml-4" />
+              </div>
+            </div>
           ))}
         </div>
       )}

@@ -6,81 +6,81 @@
 
 @layer base {
   :root {
-    --background: 140 20% 98%;
-    --foreground: 160 30% 10%;
+    --background: 0 0% 100%;
+    --foreground: 215 25% 15%;
 
     --card: 0 0% 100%;
-    --card-foreground: 160 30% 10%;
+    --card-foreground: 215 25% 15%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 160 30% 10%;
+    --popover-foreground: 215 25% 15%;
 
-    --primary: 152 55% 36%;
+    --primary: 200 90% 40%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 150 20% 94%;
-    --secondary-foreground: 160 30% 15%;
+    --secondary: 200 80% 95%;
+    --secondary-foreground: 200 80% 20%;
 
-    --muted: 140 15% 94%;
-    --muted-foreground: 160 10% 45%;
+    --muted: 215 20% 96%;
+    --muted-foreground: 215 15% 45%;
 
-    --accent: 152 40% 90%;
-    --accent-foreground: 152 55% 25%;
+    --accent: 200 80% 90%;
+    --accent-foreground: 200 90% 30%;
 
-    --destructive: 0 72% 51%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 150 15% 89%;
-    --input: 150 15% 89%;
-    --ring: 152 55% 36%;
+    --border: 215 20% 90%;
+    --input: 215 20% 90%;
+    --ring: 200 90% 40%;
 
     --radius: 0.75rem;
 
-    --sidebar-background: 152 30% 12%;
+    --sidebar-background: 215 40% 14%;
     --sidebar-foreground: 0 0% 95%;
-    --sidebar-primary: 152 55% 45%;
+    --sidebar-primary: 200 90% 50%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 152 25% 18%;
+    --sidebar-accent: 215 35% 22%;
     --sidebar-accent-foreground: 0 0% 90%;
-    --sidebar-border: 152 20% 20%;
-    --sidebar-ring: 152 55% 45%;
+    --sidebar-border: 215 40% 20%;
+    --sidebar-ring: 200 90% 50%;
 
-    --success: 152 55% 36%;
+    --success: 142 72% 29%;
     --success-foreground: 0 0% 100%;
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
-    --info: 210 80% 52%;
+    --info: 200 90% 45%;
     --info-foreground: 0 0% 100%;
   }
 
   .dark {
-    --background: 160 30% 6%;
-    --foreground: 140 15% 93%;
-    --card: 160 25% 9%;
-    --card-foreground: 140 15% 93%;
-    --popover: 160 25% 9%;
-    --popover-foreground: 140 15% 93%;
-    --primary: 152 55% 45%;
+    --background: 215 40% 6%;
+    --foreground: 215 15% 90%;
+    --card: 215 40% 9%;
+    --card-foreground: 215 15% 90%;
+    --popover: 215 40% 9%;
+    --popover-foreground: 215 15% 90%;
+    --primary: 200 90% 52%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 160 20% 14%;
-    --secondary-foreground: 140 15% 90%;
-    --muted: 160 15% 14%;
-    --muted-foreground: 140 10% 55%;
-    --accent: 152 30% 16%;
-    --accent-foreground: 152 40% 75%;
-    --destructive: 0 62% 30%;
+    --secondary: 215 30% 16%;
+    --secondary-foreground: 215 15% 90%;
+    --muted: 215 30% 16%;
+    --muted-foreground: 215 10% 60%;
+    --accent: 215 30% 22%;
+    --accent-foreground: 200 80% 80%;
+    --destructive: 0 62% 35%;
     --destructive-foreground: 0 0% 100%;
-    --border: 160 15% 16%;
-    --input: 160 15% 16%;
-    --ring: 152 55% 45%;
-    --sidebar-background: 160 30% 5%;
+    --border: 215 30% 18%;
+    --input: 215 30% 18%;
+    --ring: 200 90% 52%;
+    --sidebar-background: 215 40% 5%;
     --sidebar-foreground: 0 0% 95%;
-    --sidebar-primary: 152 55% 50%;
+    --sidebar-primary: 200 90% 52%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 160 20% 10%;
+    --sidebar-accent: 215 35% 12%;
     --sidebar-accent-foreground: 0 0% 90%;
-    --sidebar-border: 160 15% 12%;
-    --sidebar-ring: 152 55% 50%;
+    --sidebar-border: 215 40% 12%;
+    --sidebar-ring: 200 90% 52%;
   }
 }
 
@@ -90,7 +90,33 @@
   }
 
   body {
-    @apply bg-background text-foreground font-sans antialiased;
+    @apply font-sans antialiased;
+    background: radial-gradient(circle at top left, hsl(36, 40%, 94%) 0%, hsl(0, 0%, 100%) 40%, hsl(210, 80%, 94%) 100%);
+    background-attachment: fixed;
+    color: hsl(var(--foreground));
     font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  }
+}
+
+@layer utilities {
+  .glass-card {
+    @apply bg-white/40 backdrop-blur-md border border-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.04)] relative overflow-hidden;
+  }
+  .dark .glass-card {
+    @apply bg-black/40 border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.2)];
+  }
+
+  .glass-pill {
+    @apply bg-white/60 backdrop-blur-sm border border-white/50 shadow-sm;
+  }
+  .dark .glass-pill {
+    @apply bg-black/40 border-white/10 shadow-sm;
+  }
+
+  .glass-icon-container {
+    @apply bg-white/60 backdrop-blur-sm border border-white/60 shadow-[inset_0_2px_4px_rgba(255,255,255,0.6),0_4px_12px_rgba(0,0,0,0.03)];
+  }
+  .dark .glass-icon-container {
+    @apply bg-black/40 border-white/10 shadow-[inset_0_2px_4px_rgba(255,255,255,0.1),0_4px_12px_rgba(0,0,0,0.2)];
   }
 }
