@@ -37,7 +37,7 @@ const AppLayout = ({ children }: { children: ReactNode }) => {
                 onClick={() => navigate('/participants')}
                 className="rounded-xl h-9"
               >
-                Participantes
+                Participantess
               </Button>
             </nav>
           </div>
