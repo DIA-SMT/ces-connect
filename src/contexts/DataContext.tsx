@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { Meeting, Participant, Contribution, UploadedFile } from '@/lib/mock-data';
+import { Meeting, Participant, Contribution, UploadedFile, DebateMessage } from '@/lib/mock-data';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -7,13 +7,14 @@ interface DataContextType {
   meetings: Meeting[];
   participants: Participant[];
   isLoading: boolean;
-  addMeeting: (meeting: Omit<Meeting, 'id' | 'participants' | 'contributions' | 'files' | 'status'>) => Promise<void>;
+  addMeeting: (meeting: Omit<Meeting, 'id' | 'participants' | 'contributions' | 'files' | 'status' | 'debateMessages'>) => Promise<void>;
   getMeetingsByCategory: (categoryId: string) => Meeting[];
   getMeeting: (id: string) => Meeting | undefined;
   addParticipant: (participant: { name: string; role: string; organization: string }) => Promise<void>;
   addContribution: (meetingId: string, participantName: string, content: string) => Promise<void>;
+  addDebateMessage: (meetingId: string, authorName: string, content: string) => Promise<void>;
   addParticipantToMeeting: (meetingId: string, participant: Participant) => Promise<void>;
-  addFileToMeeting: (meetingId: string, file: { name: string; type: string; size: string }) => Promise<void>;
+  addFileToMeeting: (meetingId: string, file: File, uploaderName: string) => Promise<void>;
   generateSummary: (meetingId: string) => void;
   generateKeyPoints: (meetingId: string) => void;
 }
@@ -28,7 +29,7 @@ export const useData = () => {
 
 // ─── Helpers to map Supabase rows to app interfaces ───────────────────────────
 
-const mapMeeting = (row: any, participants: Participant[], contributions: Contribution[], files: UploadedFile[]): Meeting => ({
+const mapMeeting = (row: any, participants: Participant[], contributions: Contribution[], files: UploadedFile[], debateMessages: DebateMessage[]): Meeting => ({
   id: row.id,
   title: row.title,
   date: row.date,
@@ -40,6 +41,7 @@ const mapMeeting = (row: any, participants: Participant[], contributions: Contri
   participants,
   contributions,
   files,
+  debateMessages,
 });
 
 const mapParticipant = (row: any): Participant => ({
@@ -56,13 +58,27 @@ const mapContribution = (row: any): Contribution => ({
   timestamp: row.created_at,
 });
 
-const mapFile = (row: any): UploadedFile => ({
+const mapFile = (row: any): UploadedFile => {
+  const filePath = row.file_path;
+  const url = filePath ? supabase.storage.from('meeting_files').getPublicUrl(filePath).data.publicUrl : undefined;
+
+  return {
+    id: row.id,
+    name: row.name,
+    type: row.type,
+    size: row.size,
+    uploadedBy: row.uploaded_by,
+    uploadedAt: row.uploaded_at,
+    filePath,
+    url,
+  };
+};
+
+const mapDebateMessage = (row: any): DebateMessage => ({
   id: row.id,
-  name: row.name,
-  type: row.type,
-  size: row.size,
-  uploadedBy: row.uploaded_by,
-  uploadedAt: row.uploaded_at,
+  authorName: row.author_name,
+  content: row.content,
+  createdAt: row.created_at,
 });
 
 // ─── Provider ─────────────────────────────────────────────────────────────────
@@ -87,7 +103,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
           *,
           meeting_participants(participant_id),
           contributions(*),
-          meeting_files(*)
+          meeting_files(*),
+          debate_messages(*)
         `)
         .order('date', { ascending: false });
 
@@ -101,8 +118,12 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
           .sort((a: Contribution, b: Contribution) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
         const files: UploadedFile[] = (row.meeting_files || []).map(mapFile);
+        
+        const debateMessages: DebateMessage[] = (row.debate_messages || [])
+          .map(mapDebateMessage)
+          .sort((a: DebateMessage, b: DebateMessage) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
-        return mapMeeting(row, meetingParticipants, contributions, files);
+        return mapMeeting(row, meetingParticipants, contributions, files, debateMessages);
       });
 
       let finalMeetings = mapped;
@@ -132,14 +153,14 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
   // ─── Mutations ───────────────────────────────────────────────────────────────
 
-  const addMeeting = async (data: Omit<Meeting, 'id' | 'participants' | 'contributions' | 'files' | 'status'>) => {
+  const addMeeting = async (data: Omit<Meeting, 'id' | 'participants' | 'contributions' | 'files' | 'status' | 'debateMessages'>) => {
     const { data: row, error } = await supabase
       .from('meetings')
       .insert({ title: data.title, date: data.date, category: data.category, description: data.description, status: 'upcoming' })
       .select()
       .single();
     if (error) throw error;
-    const newMeeting = mapMeeting(row, [], [], []);
+    const newMeeting = mapMeeting(row, [], [], [], []);
     setMeetings(prev => [newMeeting, ...prev]);
   };
 
@@ -168,6 +189,19 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     );
   };
 
+  const addDebateMessage = async (meetingId: string, authorName: string, content: string) => {
+    const { data: row, error } = await supabase
+      .from('debate_messages')
+      .insert({ meeting_id: meetingId, author_name: authorName, content })
+      .select()
+      .single();
+    if (error) throw error;
+    const newMessage = mapDebateMessage(row);
+    setMeetings(prev =>
+      prev.map(m => m.id === meetingId ? { ...m, debateMessages: [...m.debateMessages, newMessage] } : m)
+    );
+  };
+
   const addParticipantToMeeting = async (meetingId: string, participant: Participant) => {
     const { error } = await supabase
       .from('meeting_participants')
@@ -182,13 +216,30 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     );
   };
 
-  const addFileToMeeting = async (meetingId: string, file: { name: string; type: string; size: string }) => {
+  const addFileToMeeting = async (meetingId: string, file: File, uploaderName: string) => {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`;
+    const filePath = `${meetingId}/${fileName}`;
+
+    const { error: uploadError } = await supabase.storage.from('meeting_files').upload(filePath, file);
+    if (uploadError) throw uploadError;
+
+    const sizeStr = `${(file.size / 1024 / 1024).toFixed(1)} MB`;
     const { data: row, error } = await supabase
       .from('meeting_files')
-      .insert({ meeting_id: meetingId, name: file.name, type: file.type, size: file.size, uploaded_by: 'Admin CES' })
+      .insert({ 
+        meeting_id: meetingId, 
+        name: file.name, 
+        type: file.type, 
+        size: sizeStr, 
+        uploaded_by: uploaderName,
+        file_path: filePath
+      })
       .select()
       .single();
+      
     if (error) throw error;
+    
     const newFile = mapFile(row);
     setMeetings(prev =>
       prev.map(m => m.id === meetingId ? { ...m, files: [...m.files, newFile] } : m)
@@ -235,7 +286,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     <DataContext.Provider value={{
       meetings, participants, isLoading,
       addMeeting, getMeetingsByCategory, getMeeting, addParticipant,
-      addContribution, addParticipantToMeeting, addFileToMeeting,
+      addContribution, addDebateMessage, addParticipantToMeeting, addFileToMeeting,
       generateSummary, generateKeyPoints,
     }}>
       {children}

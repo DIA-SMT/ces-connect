@@ -7,9 +7,17 @@ export interface Meeting {
   participants: Participant[];
   contributions: Contribution[];
   files: UploadedFile[];
+  debateMessages: DebateMessage[];
   summary?: string;
   keyPoints?: string[];
   status: 'upcoming' | 'completed';
+}
+
+export interface DebateMessage {
+  id: string;
+  authorName: string;
+  content: string;
+  createdAt: string;
 }
 
 export interface Participant {
@@ -33,6 +41,8 @@ export interface UploadedFile {
   size: string;
   uploadedAt: string;
   uploadedBy: string;
+  filePath?: string;
+  url?: string;
 }
 
 export interface Category {
