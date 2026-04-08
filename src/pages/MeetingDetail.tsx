@@ -17,22 +17,30 @@ import { useAuth } from '@/contexts/AuthContext';
 const MeetingDetail = () => {
   const { meetingId } = useParams();
   const navigate = useNavigate();
-  const { getMeeting, participants, addContribution, addParticipantToMeeting, addFileToMeeting, generateSummary, generateKeyPoints } = useData();
+  const { getMeeting, participants, addContribution, addDebateMessage, addParticipantToMeeting, addFileToMeeting, generateSummary, generateKeyPoints } = useData();
   const { user } = useAuth();
   const meeting = getMeeting(meetingId || '');
 
   const [newContribution, setNewContribution] = useState('');
+  const [newDebateMessage, setNewDebateMessage] = useState('');
   const [contributorName, setContributorName] = useState('');
   const [selectedParticipant, setSelectedParticipant] = useState('');
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [keyPointsLoading, setKeyPointsLoading] = useState(false);
+  const [uploadLoading, setUploadLoading] = useState(false);
 
   if (!meeting) return <p className="p-8">Reunión no encontrada</p>;
 
-  const handleAddContribution = () => {
+  const handleAddContribution = async () => {
     if (!newContribution || !contributorName) return;
-    addContribution(meeting.id, contributorName, newContribution);
+    await addContribution(meeting.id, contributorName, newContribution);
     setNewContribution('');
+  };
+
+  const handleAddDebateMessage = async () => {
+    if (!newDebateMessage) return;
+    await addDebateMessage(meeting.id, user?.name || 'Invitado', newDebateMessage);
+    setNewDebateMessage('');
   };
 
   const handleAddParticipant = () => {
@@ -41,14 +49,19 @@ const MeetingDetail = () => {
     setSelectedParticipant('');
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      addFileToMeeting(meeting.id, {
-        name: file.name,
-        type: file.type,
-        size: `${(file.size / 1024 / 1024).toFixed(1)} MB`,
-      });
+      setUploadLoading(true);
+      try {
+        await addFileToMeeting(meeting.id, file, user?.name || 'Usuario');
+      } catch (err) {
+        console.error(err);
+        alert('Error al subir el archivo');
+      } finally {
+        setUploadLoading(false);
+        e.target.value = '';
+      }
     }
   };
 
@@ -96,19 +109,151 @@ const MeetingDetail = () => {
           <TabsTrigger value="ai" className="text-xs sm:text-sm"><Brain className="w-3.5 h-3.5 mr-1.5 hidden sm:inline" />IA</TabsTrigger>
         </TabsList>
 
-        {/* Debate - unified feed */}
+        {/* Debate - Chat thread */}
         <TabsContent value="debate" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Tablero de debate</CardTitle>
-              <CardDescription>Todo lo que los participantes escribieron y subieron en esta reunión</CardDescription>
+              <CardTitle className="text-base flex items-center gap-2"><MessageSquare className="w-4 h-4 text-primary" />Espacio de Debate</CardTitle>
+              <CardDescription>Discusión sobre los temas y aportes de la reunión</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-4">
+              {meeting.debateMessages.length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-8">Aún no hay mensajes en el debate. ¡Sé el primero en participar!</p>
+              )}
+              
+              <div className="space-y-6 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+                {[
+                  ...meeting.debateMessages.map(m => ({ type: 'message' as const, id: m.id, author: m.authorName, content: m.content, time: m.createdAt })),
+                  ...meeting.contributions.map(c => ({ type: 'contribution' as const, id: c.id, author: c.participantName, content: c.content, time: c.timestamp })),
+                  ...meeting.files.map(f => ({ type: 'file' as const, id: f.id, author: f.uploadedBy, content: f.name, time: f.uploadedAt, size: f.size, url: f.url })),
+                ]
+                  .sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime())
+                  .map((item) => {
+                    if (item.type === 'message') {
+                      return (
+                        <div key={item.id} className={`flex flex-col gap-1 ${item.author === user?.name ? 'items-end' : 'items-start'}`}>
+                          <div className="flex items-center gap-2 px-1">
+                            <span className="text-[10px] font-semibold text-muted-foreground uppercase">{item.author}</span>
+                            <span className="text-[10px] text-muted-foreground/60">{format(new Date(item.time), 'HH:mm')}</span>
+                          </div>
+                          <div className={`max-w-[85%] rounded-2xl px-4 py-2 text-sm ${
+                            item.author === user?.name 
+                              ? 'bg-primary text-primary-foreground rounded-tr-none' 
+                              : 'bg-muted rounded-tl-none'
+                          }`}>
+                            {item.content}
+                          </div>
+                        </div>
+                      );
+                    } else {
+                      // Contribution or File card inside the debate
+                      return (
+                        <div key={item.id} className="flex flex-col items-center gap-2 my-2">
+                          <div className="flex items-center gap-2 w-full">
+                            <div className="h-[1px] flex-1 bg-border/50"></div>
+                            <span className="text-[10px] text-muted-foreground/50 font-medium uppercase tracking-widest bg-background px-2">
+                              Aporte de {item.author} • {format(new Date(item.time), 'HH:mm')}
+                            </span>
+                            <div className="h-[1px] flex-1 bg-border/50"></div>
+                          </div>
+                          
+                          <div className="w-full max-w-[90%] border rounded-xl p-3 bg-muted/20 border-dashed border-primary/30 flex gap-3 items-center">
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                              item.type === 'contribution' ? 'bg-primary/10' : 'bg-info/10'
+                            }`}>
+                              {item.type === 'contribution' ? <FileText className="w-4 h-4 text-primary" /> : <Paperclip className="w-4 h-4 text-info" />}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              {item.type === 'contribution' ? (
+                                <p className="text-xs text-muted-foreground italic line-clamp-2">"{item.content}"</p>
+                              ) : (
+                                <div className="flex items-center justify-between gap-2">
+                                  <span className="text-xs font-medium truncate">{item.content}</span>
+                                  {item.url && (
+                                    <a href={item.url} target="_blank" rel="noopener noreferrer" className="text-[10px] text-primary hover:underline font-bold flex-shrink-0">
+                                      VER ARCHIVO
+                                    </a>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    }
+                  })}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="sticky bottom-4 border-primary/20 shadow-lg">
+            <CardContent className="pt-4 p-3 sm:p-4">
+              <div className="flex gap-2">
+                <Textarea 
+                  placeholder="Escribe tu opinión o comentario para el debate..." 
+                  value={newDebateMessage} 
+                  onChange={e => setNewDebateMessage(e.target.value)} 
+                  className="min-h-[50px] resize-none"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleAddDebateMessage();
+                    }
+                  }}
+                />
+                <Button onClick={handleAddDebateMessage} disabled={!newDebateMessage} className="h-auto px-4">
+                  <Send className="w-4 h-4" />
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Aportes - Unified Entry and List */}
+        <TabsContent value="contributions" className="space-y-4">
+          <Card className="border-primary/20 bg-primary/5">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2"><Plus className="w-4 h-4 text-primary" />Nuevo Aporte o Archivo</CardTitle>
+              <CardDescription>Sube documentos o escribe aportes formales aquí</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-3">
+                  <Input placeholder="Tu nombre" value={contributorName} onChange={e => setContributorName(e.target.value)} />
+                  <Textarea placeholder="Escribe el contenido del aporte..." value={newContribution} onChange={e => setNewContribution(e.target.value)} rows={3} />
+                  <Button onClick={handleAddContribution} disabled={!newContribution || !contributorName} className="w-full">
+                    <Send className="w-4 h-4 mr-2" />Enviar Aporte escrito
+                  </Button>
+                </div>
+                
+                <div className="flex flex-col justify-center gap-2">
+                  <Label htmlFor="aporte-file-upload" className={`cursor-pointer ${uploadLoading ? 'opacity-50 pointer-events-none' : ''}`}>
+                    <div className="border-2 border-dashed rounded-lg p-8 text-center bg-background/50 hover:border-primary/50 transition-colors">
+                      {uploadLoading ? (
+                        <Upload className="w-6 h-6 mx-auto text-primary animate-bounce mb-2" />
+                      ) : (
+                        <Paperclip className="w-6 h-6 mx-auto text-primary mb-2" />
+                      )}
+                      <p className="text-sm font-medium">{uploadLoading ? 'Subiendo...' : 'Adjuntar Documento'}</p>
+                      <p className="text-xs text-muted-foreground mt-1">Sube PDF, DOC o TXT directamente</p>
+                    </div>
+                  </Label>
+                  <Input id="aporte-file-upload" type="file" className="hidden" accept=".pdf,.doc,.docx,.txt" onChange={handleFileUpload} />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Contenido Aportado</CardTitle>
+              <CardDescription>Todo lo cargado oficialmente para ser debatido</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
               {meeting.contributions.length === 0 && meeting.files.length === 0 && (
-                <p className="text-sm text-muted-foreground text-center py-8">Aún no hay actividad en esta reunión.</p>
+                <p className="text-sm text-muted-foreground text-center py-8">No hay aportes ni archivos cargados aún.</p>
               )}
 
-              {/* Unified timeline: contributions + files sorted by time */}
               {[
                 ...meeting.contributions.map(c => ({
                   type: 'contribution' as const,
@@ -124,89 +269,49 @@ const MeetingDetail = () => {
                   content: f.name,
                   time: f.uploadedAt,
                   size: f.size,
+                  url: f.url,
                 })),
               ]
-                .sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime())
+                .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()) // Most recent first for primary feed
                 .map(item => (
-                  <div key={item.id} className="flex gap-3 border rounded-lg p-3">
-                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <div key={item.id} className="flex gap-3 border rounded-xl p-4 bg-muted/30">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                      item.type === 'contribution' ? 'bg-primary/10' : 'bg-info/10'
+                    }`}>
                       {item.type === 'contribution'
-                        ? <MessageSquare className="w-4 h-4 text-primary" />
-                        : <Paperclip className="w-4 h-4 text-primary" />
+                        ? <FileText className="w-5 h-5 text-primary" />
+                        : <Paperclip className="w-5 h-5 text-info" />
                       }
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-2">
-                        <span className="font-medium text-sm">{item.author}</span>
-                        <Badge variant="secondary" className="text-[10px] flex-shrink-0">
-                          {item.type === 'contribution' ? 'Texto' : 'Archivo'}
-                        </Badge>
+                        <span className="font-semibold text-sm">{item.author}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] text-muted-foreground">{format(new Date(item.time), "HH:mm")}</span>
+                          <Badge variant={item.type === 'contribution' ? 'secondary' : 'outline'} className="text-[10px] font-normal uppercase tracking-wider">
+                            {item.type === 'contribution' ? 'Texto' : 'Documento'}
+                          </Badge>
+                        </div>
                       </div>
                       {item.type === 'contribution' ? (
-                        <p className="text-sm text-muted-foreground mt-1">{item.content}</p>
+                        <p className="text-sm text-muted-foreground mt-2 leading-relaxed">{item.content}</p>
                       ) : (
-                        <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
-                          <FileText className="w-3.5 h-3.5" />
-                          <span>{item.content}</span>
-                          {'size' in item && <span className="text-xs">({(item as any).size})</span>}
+                        <div className="flex items-center gap-3 mt-2 p-3 rounded-lg bg-background border border-primary/10">
+                          <FileText className="w-5 h-5 text-primary" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{item.content}</p>
+                            <p className="text-[10px] text-muted-foreground">{(item as any).size}</p>
+                          </div>
+                          {item.url && (
+                            <Button variant="outline" size="sm" asChild className="h-8">
+                              <a href={item.url as string} target="_blank" rel="noopener noreferrer">Ver archivo</a>
+                            </Button>
+                          )}
                         </div>
                       )}
                     </div>
                   </div>
                 ))}
-            </CardContent>
-          </Card>
-
-          {/* Quick add contribution + file from debate tab */}
-          <Card>
-            <CardHeader><CardTitle className="text-base">Participar en el debate</CardTitle></CardHeader>
-            <CardContent className="space-y-3">
-              <Input placeholder="Tu nombre" value={contributorName} onChange={e => setContributorName(e.target.value)} />
-              <Textarea placeholder="Escribí tu aporte al debate..." value={newContribution} onChange={e => setNewContribution(e.target.value)} rows={3} />
-              <div className="flex gap-2">
-                <Button onClick={handleAddContribution} disabled={!newContribution || !contributorName}>
-                  <Send className="w-4 h-4 mr-2" />Enviar
-                </Button>
-                <Label htmlFor="debate-file-upload" className="cursor-pointer">
-                  <Button variant="outline" asChild>
-                    <span><Paperclip className="w-4 h-4 mr-2" />Adjuntar archivo</span>
-                  </Button>
-                </Label>
-                <Input id="debate-file-upload" type="file" className="hidden" accept=".pdf,.doc,.docx,.txt" onChange={handleFileUpload} />
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Contributions */}
-        <TabsContent value="contributions" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Aportes individuales</CardTitle>
-              <CardDescription>Contribuciones de los participantes</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {meeting.contributions.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">No hay aportes aún.</p>}
-              {meeting.contributions.map(c => (
-                <div key={c.id} className="border rounded-lg p-3 space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium text-sm">{c.participantName}</span>
-                    <span className="text-xs text-muted-foreground">{format(new Date(c.timestamp), 'HH:mm')}</span>
-                  </div>
-                  <p className="text-sm text-muted-foreground">{c.content}</p>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader><CardTitle className="text-base">Nuevo aporte</CardTitle></CardHeader>
-            <CardContent className="space-y-3">
-              <Input placeholder="Nombre del participante" value={contributorName} onChange={e => setContributorName(e.target.value)} />
-              <Textarea placeholder="Escriba su aporte..." value={newContribution} onChange={e => setNewContribution(e.target.value)} rows={4} />
-              <Button onClick={handleAddContribution} disabled={!newContribution || !contributorName}>
-                <Send className="w-4 h-4 mr-2" />Enviar aporte
-              </Button>
             </CardContent>
           </Card>
         </TabsContent>
@@ -265,7 +370,13 @@ const MeetingDetail = () => {
                   <div className="flex items-center gap-3">
                     <FileText className="w-5 h-5 text-primary" />
                     <div>
-                      <p className="font-medium text-sm">{f.name}</p>
+                      {f.url ? (
+                        <a href={f.url} target="_blank" rel="noopener noreferrer" className="font-medium text-sm hover:underline hover:text-primary transition-colors">
+                          {f.name}
+                        </a>
+                      ) : (
+                        <p className="font-medium text-sm">{f.name}</p>
+                      )}
                       <p className="text-xs text-muted-foreground">{f.size} · Subido por {f.uploadedBy}</p>
                     </div>
                   </div>
@@ -273,10 +384,14 @@ const MeetingDetail = () => {
                 </div>
               ))}
               <div>
-                <Label htmlFor="file-upload" className="cursor-pointer">
+                <Label htmlFor="file-upload" className={`cursor-pointer ${uploadLoading ? 'opacity-50 pointer-events-none' : ''}`}>
                   <div className="border-2 border-dashed rounded-lg p-6 text-center hover:border-primary/50 transition-colors">
-                    <Upload className="w-6 h-6 mx-auto text-muted-foreground mb-2" />
-                    <p className="text-sm text-muted-foreground">Haga clic para subir un archivo</p>
+                    {uploadLoading ? (
+                      <Upload className="w-6 h-6 mx-auto text-primary animate-bounce mb-2" />
+                    ) : (
+                      <Upload className="w-6 h-6 mx-auto text-muted-foreground mb-2" />
+                    )}
+                    <p className="text-sm text-muted-foreground">{uploadLoading ? 'Subiendo archivo...' : 'Haga clic para subir un archivo'}</p>
                     <p className="text-xs text-muted-foreground">PDF, DOC, TXT</p>
                   </div>
                 </Label>
