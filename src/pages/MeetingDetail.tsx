@@ -25,6 +25,7 @@ const MeetingDetail = () => {
   const [newDebateMessage, setNewDebateMessage] = useState('');
   const [contributorName, setContributorName] = useState('');
   const [selectedParticipant, setSelectedParticipant] = useState('');
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [keyPointsLoading, setKeyPointsLoading] = useState(false);
   const [uploadLoading, setUploadLoading] = useState(false);
@@ -32,9 +33,18 @@ const MeetingDetail = () => {
   if (!meeting) return <p className="p-8">Reunión no encontrada</p>;
 
   const handleAddContribution = async () => {
-    if (!newContribution || !contributorName) return;
-    await addContribution(meeting.id, contributorName, newContribution);
-    setNewContribution('');
+    if ((!newContribution && !pendingFile) || !contributorName) return;
+    setUploadLoading(true);
+    try {
+      await addContribution(meeting.id, contributorName, newContribution, pendingFile || undefined);
+      setNewContribution('');
+      setPendingFile(null);
+    } catch (err) {
+      console.error(err);
+      alert('Error al enviar el aporte');
+    } finally {
+      setUploadLoading(false);
+    }
   };
 
   const handleAddDebateMessage = async () => {
@@ -49,7 +59,14 @@ const MeetingDetail = () => {
     setSelectedParticipant('');
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setPendingFile(file);
+    }
+  };
+
+  const handleImmediateUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       setUploadLoading(true);
@@ -124,8 +141,23 @@ const MeetingDetail = () => {
               <div className="space-y-6 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
                 {[
                   ...meeting.debateMessages.map(m => ({ type: 'message' as const, id: m.id, author: m.authorName, content: m.content, time: m.createdAt })),
-                  ...meeting.contributions.map(c => ({ type: 'contribution' as const, id: c.id, author: c.participantName, content: c.content, time: c.timestamp })),
-                  ...meeting.files.map(f => ({ type: 'file' as const, id: f.id, author: f.uploadedBy, content: f.name, time: f.uploadedAt, size: f.size, url: f.url })),
+                  ...meeting.contributions.map(c => ({ 
+                    type: 'contribution' as const, 
+                    id: c.id, 
+                    author: c.participantName, 
+                    content: c.content, 
+                    time: c.timestamp,
+                    file: c.filePath ? { name: c.fileName, url: c.url, size: c.fileSize } : null
+                  })),
+                  ...meeting.files.map(f => ({ 
+                    type: 'file' as const, 
+                    id: f.id, 
+                    author: f.uploadedBy, 
+                    content: f.name, 
+                    time: f.uploadedAt, 
+                    size: f.size, 
+                    url: f.url 
+                  })),
                 ]
                   .sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime())
                   .map((item) => {
@@ -146,7 +178,11 @@ const MeetingDetail = () => {
                         </div>
                       );
                     } else {
-                      // Contribution or File card inside the debate
+                      // Contribution (might have file) or independent File card
+                      const isContribution = item.type === 'contribution';
+                      const hasFile = isContribution ? !!(item as any).file : true;
+                      const fileData = isContribution ? (item as any).file : { name: item.content, url: (item as any).url, size: (item as any).size };
+
                       return (
                         <div key={item.id} className="flex flex-col items-center gap-2 my-2">
                           <div className="flex items-center gap-2 w-full">
@@ -157,26 +193,31 @@ const MeetingDetail = () => {
                             <div className="h-[1px] flex-1 bg-border/50"></div>
                           </div>
                           
-                          <div className="w-full max-w-[90%] border rounded-xl p-3 bg-muted/20 border-dashed border-primary/30 flex gap-3 items-center">
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                              item.type === 'contribution' ? 'bg-primary/10' : 'bg-info/10'
-                            }`}>
-                              {item.type === 'contribution' ? <FileText className="w-4 h-4 text-primary" /> : <Paperclip className="w-4 h-4 text-info" />}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              {item.type === 'contribution' ? (
-                                <p className="text-xs text-muted-foreground italic line-clamp-2">"{item.content}"</p>
-                              ) : (
-                                <div className="flex items-center justify-between gap-2">
-                                  <span className="text-xs font-medium truncate">{item.content}</span>
-                                  {item.url && (
-                                    <a href={item.url} target="_blank" rel="noopener noreferrer" className="text-[10px] text-primary hover:underline font-bold flex-shrink-0">
-                                      VER ARCHIVO
-                                    </a>
-                                  )}
+                          <div className="w-full max-w-[90%] border rounded-xl p-3 bg-muted/20 border-dashed border-primary/30 space-y-3">
+                            {isContribution && item.content && (
+                              <p className={`text-sm ${hasFile ? 'font-medium' : 'text-muted-foreground italic'}`}>
+                                {item.content}
+                              </p>
+                            )}
+                            
+                            {hasFile && (
+                              <div className="flex gap-3 items-center bg-background p-3 rounded-lg border border-primary/10">
+                                <div className="w-8 h-8 rounded-full bg-info/10 flex items-center justify-center flex-shrink-0">
+                                  <Paperclip className="w-4 h-4 text-info" />
                                 </div>
-                              )}
-                            </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center justify-between gap-2">
+                                    <span className="text-xs font-semibold truncate">{fileData.name}</span>
+                                    {fileData.url && (
+                                      <a href={fileData.url} target="_blank" rel="noopener noreferrer" className="text-[10px] text-primary hover:underline font-bold flex-shrink-0">
+                                        VER ARCHIVO
+                                      </a>
+                                    )}
+                                  </div>
+                                  <p className="text-[10px] text-muted-foreground">{fileData.size}</p>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         </div>
                       );
@@ -221,25 +262,35 @@ const MeetingDetail = () => {
                 <div className="space-y-3">
                   <Input placeholder="Tu nombre" value={contributorName} onChange={e => setContributorName(e.target.value)} />
                   <Textarea placeholder="Escribe el contenido del aporte..." value={newContribution} onChange={e => setNewContribution(e.target.value)} rows={3} />
-                  <Button onClick={handleAddContribution} disabled={!newContribution || !contributorName} className="w-full">
-                    <Send className="w-4 h-4 mr-2" />Enviar Aporte escrito
-                  </Button>
                 </div>
                 
                 <div className="flex flex-col justify-center gap-2">
                   <Label htmlFor="aporte-file-upload" className={`cursor-pointer ${uploadLoading ? 'opacity-50 pointer-events-none' : ''}`}>
                     <div className="border-2 border-dashed rounded-lg p-8 text-center bg-background/50 hover:border-primary/50 transition-colors">
-                      {uploadLoading ? (
-                        <Upload className="w-6 h-6 mx-auto text-primary animate-bounce mb-2" />
+                      {pendingFile ? (
+                        <>
+                          <FileText className="w-6 h-6 mx-auto text-primary mb-2" />
+                          <p className="text-sm font-medium text-primary truncate px-2">{pendingFile.name}</p>
+                          <Button variant="ghost" size="sm" className="mt-2 text-xs text-muted-foreground hover:text-destructive" onClick={(e) => { e.preventDefault(); setPendingFile(null); }}>
+                            Quitar archivo
+                          </Button>
+                        </>
                       ) : (
-                        <Paperclip className="w-6 h-6 mx-auto text-primary mb-2" />
+                        <>
+                          <Paperclip className="w-6 h-6 mx-auto text-primary mb-2" />
+                          <p className="text-sm font-medium">Adjuntar Documento</p>
+                          <p className="text-xs text-muted-foreground mt-1">Sube PDF, DOC o TXT directamente</p>
+                        </>
                       )}
-                      <p className="text-sm font-medium">{uploadLoading ? 'Subiendo...' : 'Adjuntar Documento'}</p>
-                      <p className="text-xs text-muted-foreground mt-1">Sube PDF, DOC o TXT directamente</p>
                     </div>
                   </Label>
-                  <Input id="aporte-file-upload" type="file" className="hidden" accept=".pdf,.doc,.docx,.txt" onChange={handleFileUpload} />
+                  <Input id="aporte-file-upload" type="file" className="hidden" accept=".pdf,.doc,.docx,.txt" onChange={handleFileSelect} />
                 </div>
+              </div>
+              <div className="flex justify-end pt-2">
+                <Button onClick={handleAddContribution} disabled={(!newContribution && !pendingFile) || !contributorName || uploadLoading} className="w-full sm:w-auto">
+                  {uploadLoading ? 'Enviando...' : 'Publicar Aporte'}
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -261,6 +312,7 @@ const MeetingDetail = () => {
                   author: c.participantName,
                   content: c.content,
                   time: c.timestamp,
+                  file: c.filePath ? { name: c.fileName, url: c.url, size: c.fileSize } : null
                 })),
                 ...meeting.files.map(f => ({
                   type: 'file' as const,
@@ -294,7 +346,23 @@ const MeetingDetail = () => {
                         </div>
                       </div>
                       {item.type === 'contribution' ? (
-                        <p className="text-sm text-muted-foreground mt-2 leading-relaxed">{item.content}</p>
+                        <div className="space-y-3 mt-2">
+                          {item.content && <p className="text-sm text-muted-foreground leading-relaxed">{item.content}</p>}
+                          {(item as any).file && (
+                            <div className="flex items-center gap-3 p-3 rounded-lg bg-background border border-primary/10">
+                              <FileText className="w-5 h-5 text-primary" />
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium truncate">{(item as any).file.name}</p>
+                                <p className="text-[10px] text-muted-foreground">{(item as any).file.size}</p>
+                              </div>
+                              {(item as any).file.url && (
+                                <Button variant="outline" size="sm" asChild className="h-8">
+                                  <a href={(item as any).file.url} target="_blank" rel="noopener noreferrer">Ver archivo</a>
+                                </Button>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       ) : (
                         <div className="flex items-center gap-3 mt-2 p-3 rounded-lg bg-background border border-primary/10">
                           <FileText className="w-5 h-5 text-primary" />
@@ -395,7 +463,7 @@ const MeetingDetail = () => {
                     <p className="text-xs text-muted-foreground">PDF, DOC, TXT</p>
                   </div>
                 </Label>
-                <Input id="file-upload" type="file" className="hidden" accept=".pdf,.doc,.docx,.txt" onChange={handleFileUpload} />
+                <Input id="file-upload" type="file" className="hidden" accept=".pdf,.doc,.docx,.txt" onChange={handleImmediateUpload} />
               </div>
             </CardContent>
           </Card>

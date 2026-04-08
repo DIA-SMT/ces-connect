@@ -32,6 +32,11 @@ export interface Contribution {
   participantName: string;
   content: string;
   timestamp: string;
+  filePath?: string;
+  fileName?: string;
+  fileType?: string;
+  fileSize?: string;
+  url?: string;
 }
 
 export interface UploadedFile {
