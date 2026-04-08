@@ -11,7 +11,7 @@ interface DataContextType {
   getMeetingsByCategory: (categoryId: string) => Meeting[];
   getMeeting: (id: string) => Meeting | undefined;
   addParticipant: (participant: { name: string; role: string; organization: string }) => Promise<void>;
-  addContribution: (meetingId: string, participantName: string, content: string) => Promise<void>;
+  addContribution: (meetingId: string, participantName: string, content: string, file?: File) => Promise<void>;
   addDebateMessage: (meetingId: string, authorName: string, content: string) => Promise<void>;
   addParticipantToMeeting: (meetingId: string, participant: Participant) => Promise<void>;
   addFileToMeeting: (meetingId: string, file: File, uploaderName: string) => Promise<void>;
@@ -51,12 +51,22 @@ const mapParticipant = (row: any): Participant => ({
   organization: row.organization,
 });
 
-const mapContribution = (row: any): Contribution => ({
-  id: row.id,
-  participantName: row.participant_name,
-  content: row.content,
-  timestamp: row.created_at,
-});
+const mapContribution = (row: any): Contribution => {
+  const filePath = row.file_path;
+  const url = filePath ? supabase.storage.from('meeting_files').getPublicUrl(filePath).data.publicUrl : undefined;
+
+  return {
+    id: row.id,
+    participantName: row.participant_name,
+    content: row.content,
+    timestamp: row.created_at,
+    filePath,
+    fileName: row.file_name,
+    fileType: row.file_type,
+    fileSize: row.file_size,
+    url,
+  };
+};
 
 const mapFile = (row: any): UploadedFile => {
   const filePath = row.file_path;
@@ -176,10 +186,33 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     setParticipants(prev => [...prev, newParticipant].sort((a, b) => a.name.localeCompare(b.name)));
   };
 
-  const addContribution = async (meetingId: string, participantName: string, content: string) => {
+  const addContribution = async (meetingId: string, participantName: string, content: string, file?: File) => {
+    let fileInfo: any = {};
+    
+    if (file) {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`;
+      const filePath = `${meetingId}/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage.from('meeting_files').upload(filePath, file);
+      if (uploadError) throw uploadError;
+
+      fileInfo = {
+        file_path: filePath,
+        file_name: file.name,
+        file_type: file.type,
+        file_size: `${(file.size / 1024 / 1024).toFixed(1)} MB`
+      };
+    }
+
     const { data: row, error } = await supabase
       .from('contributions')
-      .insert({ meeting_id: meetingId, participant_name: participantName, content })
+      .insert({ 
+        meeting_id: meetingId, 
+        participant_name: participantName, 
+        content,
+        ...fileInfo
+      })
       .select()
       .single();
     if (error) throw error;
