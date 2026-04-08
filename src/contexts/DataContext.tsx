@@ -10,6 +10,7 @@ interface DataContextType {
   addMeeting: (meeting: Omit<Meeting, 'id' | 'participants' | 'contributions' | 'files' | 'status'>) => Promise<void>;
   getMeetingsByCategory: (categoryId: string) => Meeting[];
   getMeeting: (id: string) => Meeting | undefined;
+  addParticipant: (participant: { name: string; role: string; organization: string }) => Promise<void>;
   addContribution: (meetingId: string, participantName: string, content: string) => Promise<void>;
   addParticipantToMeeting: (meetingId: string, participant: Participant) => Promise<void>;
   addFileToMeeting: (meetingId: string, file: { name: string; type: string; size: string }) => Promise<void>;
@@ -104,13 +105,20 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         return mapMeeting(row, meetingParticipants, contributions, files);
       });
 
-      setMeetings(mapped);
+      let finalMeetings = mapped;
+      if (user?.role === 'comun') {
+        finalMeetings = mapped.filter(m => 
+          m.participants.some(p => p.name.toLowerCase() === user.name.toLowerCase())
+        );
+      }
+
+      setMeetings(finalMeetings);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const { session } = useAuth();
+  const { session, user } = useAuth();
 
   useEffect(() => {
     if (!session) {
@@ -120,7 +128,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
     loadAll();
-  }, [session]);
+  }, [session, user]);
 
   // ─── Mutations ───────────────────────────────────────────────────────────────
 
@@ -133,6 +141,18 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     if (error) throw error;
     const newMeeting = mapMeeting(row, [], [], []);
     setMeetings(prev => [newMeeting, ...prev]);
+  };
+
+  const addParticipant = async (data: { name: string; role: string; organization: string }) => {
+    const { data: row, error } = await supabase
+      .from('participants')
+      .insert({ name: data.name, role: data.role, organization: data.organization })
+      .select()
+      .single();
+    if (error) throw error;
+    const newParticipant = mapParticipant(row);
+    // Sort participants alphabetically after adding
+    setParticipants(prev => [...prev, newParticipant].sort((a, b) => a.name.localeCompare(b.name)));
   };
 
   const addContribution = async (meetingId: string, participantName: string, content: string) => {
@@ -214,7 +234,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   return (
     <DataContext.Provider value={{
       meetings, participants, isLoading,
-      addMeeting, getMeetingsByCategory, getMeeting,
+      addMeeting, getMeetingsByCategory, getMeeting, addParticipant,
       addContribution, addParticipantToMeeting, addFileToMeeting,
       generateSummary, generateKeyPoints,
     }}>

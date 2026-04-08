@@ -5,6 +5,7 @@ import Dashboard from './Dashboard';
 import CategoryPage from './CategoryPage';
 import MeetingDetail from './MeetingDetail';
 import AppLayout from '@/components/AppLayout';
+import ParticipantsPage from './ParticipantsPage';
 
 const Index = () => {
   const { isAuthenticated, isLoading } = useAuth();
@@ -26,6 +27,7 @@ const Index = () => {
     <AppLayout>
       <Routes>
         <Route path="/" element={<Dashboard />} />
+        <Route path="/participants" element={<ParticipantsPage />} />
         <Route path="/category/:categoryId" element={<CategoryPage />} />
         <Route path="/meeting/:meetingId" element={<MeetingDetail />} />
       </Routes>
