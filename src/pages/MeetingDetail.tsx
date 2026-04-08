@@ -12,11 +12,13 @@ import { ArrowLeft, CalendarDays, Users, FileText, Brain, Sparkles, ListChecks, 
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 
 const MeetingDetail = () => {
   const { meetingId } = useParams();
   const navigate = useNavigate();
   const { getMeeting, participants, addContribution, addParticipantToMeeting, addFileToMeeting, generateSummary, generateKeyPoints } = useData();
+  const { user } = useAuth();
   const meeting = getMeeting(meetingId || '');
 
   const [newContribution, setNewContribution] = useState('');
@@ -230,7 +232,7 @@ const MeetingDetail = () => {
             </CardContent>
           </Card>
 
-          {availableParticipants.length > 0 && (
+          {user?.role === 'admin' && availableParticipants.length > 0 && (
             <Card>
               <CardHeader><CardTitle className="text-base">Agregar participante</CardTitle></CardHeader>
               <CardContent className="flex gap-3">

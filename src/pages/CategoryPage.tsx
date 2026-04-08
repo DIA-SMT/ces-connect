@@ -10,6 +10,7 @@ import { CalendarDays, Plus, ArrowLeft, Users, ArrowRight, Clock, CheckCircle2, 
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 
 type FilterType = 'all' | 'upcoming' | 'completed';
 
@@ -23,6 +24,7 @@ const CategoryPage = () => {
   const { categoryId } = useParams();
   const navigate = useNavigate();
   const { getMeetingsByCategory, addMeeting } = useData();
+  const { user } = useAuth();
   const category = categories.find(c => c.id === categoryId);
   const allMeetings = getMeetingsByCategory(categoryId || '');
 
@@ -92,14 +94,15 @@ const CategoryPage = () => {
         </div>
 
         {/* New meeting button */}
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button className="rounded-xl gap-2">
-              <Plus className="w-4 h-4" />
-              Nueva reunión
+        {user?.role === 'admin' && (
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button className="rounded-xl gap-2">
+                <Plus className="w-4 h-4" />
+                Nueva reunión
             </Button>
           </DialogTrigger>
-          <DialogContent className="glass-card border-white/60 rounded-3xl">
+          <DialogContent className="bg-white/80 backdrop-blur-xl border border-white/60 shadow-xl rounded-3xl sm:max-w-md w-[95vw] max-h-[85vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="text-slate-800">Crear reunión</DialogTitle>
             </DialogHeader>
@@ -120,6 +123,7 @@ const CategoryPage = () => {
             </div>
           </DialogContent>
         </Dialog>
+        )}
       </div>
 
       {/* Meetings list */}
