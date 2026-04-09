@@ -59,13 +59,17 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-10 px-2 sm:px-0">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight text-slate-800 dark:text-white">Panel de Control</h1>
-        <p className="text-slate-600 dark:text-white/70 mt-1">Gestione reuniones, participantes y aportes colaborativos</p>
+      <div className="relative">
+        <div className="absolute -top-10 -left-10 w-64 h-64 bg-primary/5 rounded-full blur-3xl -z-10 animate-pulse" />
+        <h1 className="text-4xl font-extrabold tracking-tight text-primary drop-shadow-sm">Panel de Control</h1>
+        <p className="text-slate-600 dark:text-white/70 mt-2 text-lg">Gestione reuniones, participantes y aportes colaborativos</p>
       </div>
 
-      <section className="space-y-4">
-        <h2 className="text-xl font-bold text-slate-800 dark:text-white">Comisiones</h2>
+      <section className="space-y-6">
+        <div className="flex items-center gap-3">
+          <div className="w-1.5 h-8 bg-accent rounded-full" />
+          <h2 className="text-2xl font-bold text-slate-800 dark:text-white">Comisiones Relevantes</h2>
+        </div>
         <div className="grid gap-6 md:grid-cols-3">
           {categories.map(cat => {
             const Icon = iconMap[cat.icon];
@@ -73,32 +77,39 @@ const Dashboard = () => {
             return (
               <div
                 key={cat.id}
-                className="glass-card rounded-[2rem] p-6 cursor-pointer hover:shadow-lg transition-all group flex flex-col justify-between min-h-[300px]"
+                className="glass-card rounded-[2.5rem] p-8 cursor-pointer hover:shadow-xl hover:-translate-y-1 transition-all group flex flex-col justify-between min-h-[320px] border-white/40"
                 onClick={() => navigate(`/category/${cat.id}`)}
               >
                 <div>
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="glass-icon-container w-12 h-12 rounded-2xl flex items-center justify-center">
-                      <Icon className="w-6 h-6 text-primary" />
+                  <div className="flex items-start justify-between mb-6">
+                    <div className="glass-icon-container w-14 h-14 rounded-2xl flex items-center justify-center bg-white/80 shadow-inner">
+                      <Icon className="w-7 h-7 text-primary" />
                     </div>
-                    <ArrowRight className="w-5 h-5 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center bg-primary/5 group-hover:bg-primary group-hover:text-white transition-all">
+                      <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-0.5" />
+                    </div>
                   </div>
-                  <h3 className="text-xl font-bold leading-tight mb-2 text-slate-800 dark:text-white">{cat.title}</h3>
-                  <p className="text-sm text-slate-600 dark:text-white/70 line-clamp-3">{cat.description}</p>
+                  <h3 className="text-2xl font-bold leading-tight mb-3 text-slate-800 dark:text-white group-hover:text-primary transition-colors">{cat.title}</h3>
+                  <p className="text-sm text-slate-600 dark:text-white/70 line-clamp-3 leading-relaxed">{cat.description}</p>
                 </div>
                 
-                <div className="mt-8 space-y-4">
+                <div className="mt-8 pt-6 border-t border-slate-100/50 space-y-4">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      {/* Placeholder space for future avatars */}
-                      <span className="text-sm font-medium text-slate-700 dark:text-white">{catMeetings.length} reuniones programadas</span>
+                    <div className="flex items-center gap-2">
+                      <div className="flex -space-x-2">
+                        {[1,2,3].map(i => (
+                          <div key={i} className="w-7 h-7 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center text-[10px] text-slate-400">
+                            {i}
+                          </div>
+                        ))}
+                      </div>
+                      <span className="text-xs font-semibold text-primary uppercase tracking-wider">{catMeetings.length} programadas</span>
                     </div>
-                    {/* Placeholder Progress Ring */}
-                    <div className="relative w-10 h-10 flex items-center justify-center">
+                    <div className="relative w-12 h-12 flex items-center justify-center">
                       <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
                         <path
-                          className="text-primary/20 dark:text-white/10"
-                          strokeWidth="3"
+                          className="text-primary/10 dark:text-white/10"
+                          strokeWidth="3.5"
                           stroke="currentColor"
                           fill="none"
                           d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
@@ -106,18 +117,19 @@ const Dashboard = () => {
                         <path
                           className="text-primary dark:text-white"
                           strokeDasharray="60, 100"
-                          strokeWidth="3"
+                          strokeWidth="3.5"
                           strokeLinecap="round"
                           stroke="currentColor"
                           fill="none"
                           d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                         />
                       </svg>
+                      <span className="absolute text-[10px] font-bold">60%</span>
                     </div>
                   </div>
-                  <div className="glass-pill px-4 py-1.5 rounded-full text-sm font-medium text-primary w-fit inline-flex">
-                    {catMeetings.length} reuniones
-                  </div>
+                  <Badge variant="secondary" className="bg-primary/5 text-primary border-none font-bold px-3 py-1 rounded-lg">
+                    {catMeetings.length} sesiones activas
+                  </Badge>
                 </div>
               </div>
             );

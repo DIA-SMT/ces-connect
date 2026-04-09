@@ -33,10 +33,11 @@ const ParticipantsPage = () => {
 
   return (
     <div className="space-y-8 px-2 sm:px-0">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
+      <div className="flex items-center justify-between gap-4 flex-wrap relative">
+        <div className="absolute -top-10 -left-10 w-48 h-48 bg-primary/5 rounded-full blur-3xl -z-10" />
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-800 dark:text-white">Directorio de Participantes</h1>
-          <p className="text-slate-600 dark:text-white/70 mt-1">Gestione la lista global de personas habilitadas</p>
+          <h1 className="text-4xl font-extrabold tracking-tight text-primary drop-shadow-sm">Directorio de Participantes</h1>
+          <p className="text-slate-600 dark:text-white/70 mt-2 text-lg">Gestione la lista global de personas habilitadas</p>
         </div>
 
         {user?.role === 'admin' && (
