@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { isBefore, startOfDay } from 'date-fns';
 import { Meeting, Participant, Contribution, UploadedFile, DebateMessage } from '@/lib/mock-data';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
@@ -29,20 +30,30 @@ export const useData = () => {
 
 // ─── Helpers to map Supabase rows to app interfaces ───────────────────────────
 
-const mapMeeting = (row: any, participants: Participant[], contributions: Contribution[], files: UploadedFile[], debateMessages: DebateMessage[]): Meeting => ({
-  id: row.id,
-  title: row.title,
-  date: row.date,
-  category: row.category,
-  description: row.description || '',
-  summary: row.summary || undefined,
-  keyPoints: row.key_points || undefined,
-  status: row.status,
-  participants,
-  contributions,
-  files,
-  debateMessages,
-});
+const mapMeeting = (row: any, participants: Participant[], contributions: Contribution[], files: UploadedFile[], debateMessages: DebateMessage[]): Meeting => {
+  const meetingDate = new Date(row.date);
+  const today = startOfDay(new Date());
+  
+  // If the meeting is marked as 'upcoming' but the date is in the past, consider it 'completed'
+  const status = (row.status === 'upcoming' && isBefore(meetingDate, today)) 
+    ? 'completed' 
+    : row.status;
+
+  return {
+    id: row.id,
+    title: row.title,
+    date: row.date,
+    category: row.category,
+    description: row.description || '',
+    summary: row.summary || undefined,
+    keyPoints: row.key_points || undefined,
+    status,
+    participants,
+    contributions,
+    files,
+    debateMessages,
+  };
+};
 
 const mapParticipant = (row: any): Participant => ({
   id: row.id,
@@ -164,9 +175,13 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   // ─── Mutations ───────────────────────────────────────────────────────────────
 
   const addMeeting = async (data: Omit<Meeting, 'id' | 'participants' | 'contributions' | 'files' | 'status' | 'debateMessages'>) => {
+    const meetingDate = new Date(data.date);
+    const today = startOfDay(new Date());
+    const status = isBefore(meetingDate, today) ? 'completed' : 'upcoming';
+
     const { data: row, error } = await supabase
       .from('meetings')
-      .insert({ title: data.title, date: data.date, category: data.category, description: data.description, status: 'upcoming' })
+      .insert({ title: data.title, date: data.date, category: data.category, description: data.description, status })
       .select()
       .single();
     if (error) throw error;
