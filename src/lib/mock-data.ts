@@ -10,6 +10,8 @@ export interface Meeting {
   debateMessages: DebateMessage[];
   summary?: string;
   keyPoints?: string[];
+  outcomeNotes?: string;
+  progressLevel?: string;
   status: 'upcoming' | 'completed';
 }
 
@@ -58,27 +60,4 @@ export interface Category {
   color: string;
 }
 
-// Static categories (fixed list - managed in DB)
-export const categories: Category[] = [
-  {
-    id: 'planeamiento',
-    title: 'Código de Planeamiento Urbano',
-    description: 'Normativas y regulaciones para el desarrollo urbano sostenible',
-    icon: 'Building2',
-    color: 'primary',
-  },
-  {
-    id: 'movilidad',
-    title: 'Movilidad',
-    description: 'Transporte público, infraestructura vial y movilidad sustentable',
-    icon: 'Bus',
-    color: 'info',
-  },
-  {
-    id: 'ia',
-    title: 'Buenas Prácticas en I.A.',
-    description: 'Regulación y ética en el uso de inteligencia artificial',
-    icon: 'Brain',
-    color: 'warning',
-  },
-];
+// Dynamic categories are managed in the database via DataContext.
