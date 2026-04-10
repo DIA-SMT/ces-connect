@@ -125,7 +125,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   const { session, user } = useAuth();
 
   const loadAll = async (currentUser?: any) => {
-    setIsLoading(true);
+    // Only show loading if we don't have data yet to avoid "reload" flicker on refreshes
+    if (meetings.length === 0 && participants.length === 0 && categories.length === 0) {
+      setIsLoading(true);
+    }
+    
     try {
       // Load participants
       const { data: participantsData } = await supabase.from('participants').select('*').order('name');
@@ -186,8 +190,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       setIsLoading(false);
       return;
     }
+    
+    // Only reload if the user email has changed or it's the first load
+    // This prevents unnecessary effects on every auth-state re-emit if session is stable
     loadAll(user);
-  }, [session, user]);
+  }, [session?.user?.id, session?.user?.email]); // More stable dependency keys than the whole session/user objects
 
   // ─── Mutations ───────────────────────────────────────────────────────────────
 
