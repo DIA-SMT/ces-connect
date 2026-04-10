@@ -45,12 +45,14 @@ const Login = () => {
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="w-full max-w-md space-y-8">
         {/* Logo */}
-        <div className="text-center space-y-3">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl glass-card mb-2">
-            <img src="/logoMuni-sm.png" alt="Logo Municipalidad" className="w-12 h-12 object-contain" />
+        <div className="text-center space-y-4">
+          <div className="inline-flex items-center justify-center p-4 rounded-[2.5rem] glass-card shadow-2xl shadow-primary/10 mb-2 border-white/60">
+            <img src="/img_logo.png" alt="CES Connect Logo" className="h-16 w-auto object-contain" />
           </div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-800">CES Connect</h1>
-          <p className="text-slate-600">Consejo Económico y Social · SMT</p>
+          <div className="space-y-1">
+            <h1 className="text-4xl font-extrabold tracking-tight text-primary drop-shadow-sm">CES Connect</h1>
+            <p className="text-slate-500 font-medium">Municipalidad de San Miguel de Tucumán</p>
+          </div>
         </div>
 
         {/* Card */}
