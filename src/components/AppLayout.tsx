@@ -20,9 +20,16 @@ const AppLayout = ({ children }: { children: ReactNode }) => {
             
             <nav className="hidden md:flex items-center gap-1">
               <Button 
-                variant={location.pathname === '/' || location.pathname.startsWith('/category') || location.pathname.startsWith('/meeting') ? 'default' : 'ghost'} 
+                variant={location.pathname === '/' || location.pathname.startsWith('/category') ? 'default' : 'ghost'} 
                 onClick={() => navigate('/')}
-                className={`rounded-xl h-9 ${location.pathname === '/' || location.pathname.startsWith('/category') || location.pathname.startsWith('/meeting') ? 'shadow-md shadow-primary/20' : ''}`}
+                className={`rounded-xl h-9 ${location.pathname === '/' || location.pathname.startsWith('/category') ? 'shadow-md shadow-primary/20' : ''}`}
+              >
+                Comisiones
+              </Button>
+              <Button 
+                variant={location.pathname === '/meetings' || location.pathname.startsWith('/meeting') ? 'default' : 'ghost'} 
+                onClick={() => navigate('/meetings')}
+                className={`rounded-xl h-9 ${location.pathname === '/meetings' || location.pathname.startsWith('/meeting') ? 'shadow-md shadow-primary/20' : ''}`}
               >
                 Reuniones
               </Button>
@@ -38,6 +45,8 @@ const AppLayout = ({ children }: { children: ReactNode }) => {
 
           <div className="flex items-center gap-4">
             <div className="md:hidden flex gap-2">
+              <Button variant="ghost" size="sm" onClick={() => navigate('/')}>Comisiones</Button>
+              <Button variant="ghost" size="sm" onClick={() => navigate('/meetings')}>Reuniones</Button>
               <Button variant="ghost" size="sm" onClick={() => navigate('/participants')}>Participantes</Button>
             </div>
             <div className="flex flex-col items-end mr-2">

@@ -1,6 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useData } from '@/contexts/DataContext';
-import { categories } from '@/lib/mock-data';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -23,7 +22,7 @@ const filters: { key: FilterType; label: string; icon: typeof LayoutList }[] = [
 const CategoryPage = () => {
   const { categoryId } = useParams();
   const navigate = useNavigate();
-  const { getMeetingsByCategory, addMeeting } = useData();
+  const { categories, getMeetingsByCategory, addMeeting, isLoading } = useData();
   const { user } = useAuth();
   const category = categories.find(c => c.id === categoryId);
   const allMeetings = getMeetingsByCategory(categoryId || '');
@@ -34,7 +33,8 @@ const CategoryPage = () => {
   const [description, setDescription] = useState('');
   const [filter, setFilter] = useState<FilterType>('all');
 
-  if (!category) return <p>Categoría no encontrada</p>;
+  if (isLoading) return <div className="p-8 text-center animate-pulse text-slate-400">Cargando comisión...</div>;
+  if (!category) return <div className="p-8 text-center text-slate-400">Categoría no encontrada</div>;
 
   const handleCreate = async () => {
     if (!title || !date) return;
