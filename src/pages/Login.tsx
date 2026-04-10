@@ -159,7 +159,7 @@ const Login = () => {
         </div>
 
         <p className="text-center text-xs text-slate-400">
-          Municipalidad de San Miguel de Tucumán
+          Desarrollado por la Dirección de Inteligencia Artificial
         </p>
       </div>
     </div>
