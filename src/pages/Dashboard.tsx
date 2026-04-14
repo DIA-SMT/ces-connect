@@ -163,6 +163,7 @@ const Dashboard = () => {
           </div>
           {user?.role === 'admin' && (
             <Button 
+              id="tour-btn-nueva-comision"
               onClick={() => handleOpenDialog()} 
               className="rounded-2xl gap-2 shadow-lg shadow-primary/20"
             >
@@ -172,12 +173,13 @@ const Dashboard = () => {
           )}
         </div>
         <div className="grid gap-6 md:grid-cols-3">
-          {categories.map(cat => {
+          {categories.map((cat, catIdx) => {
             const Icon = iconMap[cat.icon] || LayoutList;
             const catMeetings = meetings.filter(m => m.category === cat.id);
             return (
               <div
                 key={cat.id}
+                id={catIdx === 0 ? 'tour-categoria-card' : undefined}
                 className="glass-card rounded-[2.5rem] p-8 cursor-pointer hover:shadow-xl hover:-translate-y-1 transition-all group flex flex-col justify-between min-h-[320px] border-white/40"
                 onClick={() => navigate(`/category/${cat.id}`)}
               >

@@ -1,14 +1,18 @@
 import { ReactNode } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { LogOut } from 'lucide-react';
+import { LogOut, HelpCircle } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import VirtualAssistant from '@/components/VirtualAssistant';
+import { OnboardingTourProvider, useTour } from '@/components/OnboardingTour';
 
-const AppLayout = ({ children }: { children: ReactNode }) => {
+// ── Inner layout (needs access to useTour inside provider) ────────────────────
+
+const AppLayoutInner = ({ children }: { children: ReactNode }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const { startTour } = useTour();
 
   return (
     <div className="min-h-screen bg-transparent">
@@ -28,6 +32,7 @@ const AppLayout = ({ children }: { children: ReactNode }) => {
                 Comisiones
               </Button>
               <Button 
+                id="tour-nav-reuniones"
                 variant={location.pathname === '/meetings' || location.pathname.startsWith('/meeting') ? 'default' : 'ghost'} 
                 onClick={() => navigate('/meetings')}
                 className={`rounded-xl h-9 ${location.pathname === '/meetings' || location.pathname.startsWith('/meeting') ? 'shadow-md shadow-primary/20' : ''}`}
@@ -35,6 +40,7 @@ const AppLayout = ({ children }: { children: ReactNode }) => {
                 Reuniones
               </Button>
               <Button 
+                id="tour-nav-participantes"
                 variant={location.pathname === '/participants' ? 'default' : 'ghost'} 
                 onClick={() => navigate('/participants')}
                 className={`rounded-xl h-9 ${location.pathname === '/participants' ? 'shadow-md shadow-primary/20' : ''}`}
@@ -44,16 +50,26 @@ const AppLayout = ({ children }: { children: ReactNode }) => {
             </nav>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
             <div className="md:hidden flex gap-2">
               <Button variant="ghost" size="sm" onClick={() => navigate('/')}>Comisiones</Button>
               <Button variant="ghost" size="sm" onClick={() => navigate('/meetings')}>Reuniones</Button>
               <Button variant="ghost" size="sm" onClick={() => navigate('/participants')}>Participantes</Button>
             </div>
-            <div className="flex flex-col items-end mr-2">
+            <div className="flex flex-col items-end mr-1">
               <span className="text-sm font-semibold text-foreground hidden sm:block">{user?.name}</span>
               <span className="text-[10px] text-muted-foreground hidden sm:block">Conectado</span>
             </div>
+            {/* Tour replay button */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="rounded-xl w-8 h-8 text-muted-foreground hover:text-primary"
+              onClick={startTour}
+              title="Ver tour de introducción"
+            >
+              <HelpCircle className="w-4 h-4" />
+            </Button>
             <Button variant="secondary" size="icon" className="rounded-xl" onClick={() => { logout(); navigate('/'); }}>
               <LogOut className="w-4 h-4 text-primary" />
             </Button>
@@ -66,5 +82,13 @@ const AppLayout = ({ children }: { children: ReactNode }) => {
     </div>
   );
 };
+
+// ── AppLayout wraps everything in the tour provider ───────────────────────────
+
+const AppLayout = ({ children }: { children: ReactNode }) => (
+  <OnboardingTourProvider>
+    <AppLayoutInner>{children}</AppLayoutInner>
+  </OnboardingTourProvider>
+);
 
 export default AppLayout;
