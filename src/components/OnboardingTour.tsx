@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { X, ChevronRight, ChevronLeft, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
@@ -13,59 +13,97 @@ interface TourStep {
   emoji?: string;
 }
 
-const TOUR_STEPS: TourStep[] = [
+// Steps shown to ADMIN users (full tour with create actions)
+const ADMIN_STEPS: TourStep[] = [
   {
     targetId: null,
     title: '¡Bienvenido a CES Connect!',
-    description:
-      'Este es el sistema de gestión de comisiones y reuniones. Te vamos a mostrar las funcionalidades principales para que puedas empezar rápidamente.',
+    description: 'Este es el sistema de gestión de comisiones y reuniones. Te vamos a mostrar las funcionalidades principales para que puedas empezar rápidamente.',
     emoji: '👋',
   },
   {
     targetId: 'tour-btn-nueva-comision',
     title: 'Crear una Comisión',
-    description:
-      'Las comisiones son el núcleo del sistema. Cada comisión agrupa un conjunto de reuniones relacionadas. Hacé clic aquí para crear una nueva comisión definiendo su nombre, descripción e ícono.',
+    description: 'Las comisiones son el núcleo del sistema. Cada comisión agrupa un conjunto de reuniones relacionadas. Hacé clic aquí para crear una nueva comisión definiendo su nombre, descripción e ícono.',
     preferredPosition: 'bottom',
-    emoji: '🏛️',
+    emoji: '🏙️',
   },
   {
     targetId: 'tour-categoria-card',
     title: 'Explorar una Comisión',
-    description:
-      'Hacé clic en cualquier tarjeta de comisión para ver sus reuniones. Desde adentro también podés crear nuevas reuniones y filtrarlas por estado (próximas / completadas).',
+    description: 'Hacé clic en cualquier tarjeta de comisión para ver sus reuniones. Desde adentro también podés crear nuevas reuniones, agregar participantes y gestionar todo el contenido.',
     preferredPosition: 'bottom',
     emoji: '📂',
   },
   {
     targetId: 'tour-nav-reuniones',
     title: 'Vista Global de Reuniones',
-    description:
-      'Desde "Reuniones" podés ver todas las reuniones del sistema, sin importar a qué comisión pertenecen. Dentro de cada reunión encontrás: debate, aportes, participantes, archivos, resultados e IA.',
+    description: 'Desde "Reuniones" podés ver todas las reuniones del sistema. Dentro de cada reunión encontrás: debate, aportes, participantes, archivos, resultados e IA.',
     preferredPosition: 'bottom',
     emoji: '📅',
   },
   {
     targetId: 'tour-nav-participantes',
     title: 'Directorio de Participantes',
-    description:
-      'Aquí encontrás el directorio de todos los participantes registrados. Podés crear nuevos participantes y luego asignarlos a reuniones específicas desde la pestaña "Participantes" de cada reunión.',
+    description: 'Aquí gestionás el directorio de todos los participantes. Podés crear nuevos y asignarlos a reuniones específicas desde la pestaña "Participantes" de cada reunión.',
     preferredPosition: 'bottom',
     emoji: '👥',
   },
   {
     targetId: 'virtual-assistant-fab',
     title: 'Asistente Virtual IA',
-    description:
-      'Este botón abre el asistente virtual conectado a la base de datos. Podés hacerle preguntas en lenguaje natural como "¿cuántas comisiones hay?", "¿cuándo es la próxima reunión?" o "¿qué se discutió en tal reunión?"',
+    description: 'Este botón abre el asistente virtual conectado a la base de datos. Podés hacerle preguntas como "¿cuántas comisiones hay?", "¿cuándo es la próxima reunión?" o "¿qué se discutió en tal reunión?"',
     preferredPosition: 'top',
     emoji: '🤖',
   },
   {
     targetId: null,
     title: '¡Listo para empezar!',
-    description:
-      'Ya conocés las funcionalidades principales de CES Connect. Podés volver a ver este tour en cualquier momento usando el botón "?" en el menú superior. ¡Mucho éxito!',
+    description: 'Ya conocés las funcionalidades principales de CES Connect. Podés volver a ver este tour en cualquier momento usando el botón "?" en el menú superior. ¡Mucho éxito!',
+    emoji: '🚀',
+  },
+];
+
+// Steps shown to COMMON users (read-only, focused on navigation and participation)
+const COMMON_STEPS: TourStep[] = [
+  {
+    targetId: null,
+    title: '¡Bienvenido a CES Connect!',
+    description: 'Sistema de gestión de comisiones y reuniones. En este tour rápido te mostramos dónde encontrar todo lo que necesitás.',
+    emoji: '👋',
+  },
+  {
+    targetId: 'tour-categoria-card',
+    title: 'Comisiones',
+    description: 'Cada tarjeta es una comisión temática. Hacé clic en una para ver sus reuniones asociadas, sus debates y los aportes realizados.',
+    preferredPosition: 'bottom',
+    emoji: '🏙️',
+  },
+  {
+    targetId: 'tour-nav-reuniones',
+    title: 'Reuniones',
+    description: 'Desde aquí podés ver todas las reuniones del sistema. Entrá a cada una para participar en el debate, subir aportes o archivos.',
+    preferredPosition: 'bottom',
+    emoji: '📅',
+  },
+  {
+    targetId: 'tour-nav-participantes',
+    title: 'Participantes',
+    description: 'El directorio de todos los participantes registrados en el sistema.',
+    preferredPosition: 'bottom',
+    emoji: '👥',
+  },
+  {
+    targetId: 'virtual-assistant-fab',
+    title: 'Asistente Virtual IA',
+    description: 'Preguntále al asistente cualquier cosa sobre el sistema: "¿cuándo es la próxima reunión?", "¿qué se discutió en tal reunión?", etc. Está conectado a la base de datos en tiempo real.',
+    preferredPosition: 'top',
+    emoji: '🤖',
+  },
+  {
+    targetId: null,
+    title: '¡Todo listo!',
+    description: '¡Ya sabés cómo navegar CES Connect! Si tenés dudas, usá el botón "?" del menú para volver a ver este tour.',
     emoji: '🚀',
   },
 ];
@@ -143,8 +181,12 @@ export function OnboardingTourProvider({ children }: { children: ReactNode }) {
   const [tooltipStyle, setTooltipStyle] = useState<React.CSSProperties>({});
   const [tooltipMaxHeight, setTooltipMaxHeight] = useState(400);
   const [visible, setVisible] = useState(false);
+  
+  // Track if we need to fall back to a centered modal for a missing element
+  const [isFallbackCentered, setIsFallbackCentered] = useState(false);
 
   const tourKey = user?.email ? `ces-tour-done-${user.email}` : null;
+  const TOUR_STEPS = user?.role === 'admin' ? ADMIN_STEPS : COMMON_STEPS;
 
   // ── Lock body scroll ────────────────────────────────────────────────────
 
@@ -182,16 +224,20 @@ export function OnboardingTourProvider({ children }: { children: ReactNode }) {
     if (!currentStep?.targetId) {
       setSpotlightRect(null);
       setTooltipStyle({});
+      setIsFallbackCentered(false);
       return;
     }
 
     const el = document.getElementById(currentStep.targetId);
     if (!el) {
+      // Element not found (e.g. hidden), fallback to centered
       setSpotlightRect(null);
       setTooltipStyle({});
+      setIsFallbackCentered(true);
       return;
     }
 
+    setIsFallbackCentered(false);
     const rect = el.getBoundingClientRect();
     const spotlight: SpotlightRect = {
       top: rect.top - SPOTLIGHT_PADDING,
@@ -208,7 +254,7 @@ export function OnboardingTourProvider({ children }: { children: ReactNode }) {
     const { style, maxHeight } = computeTooltipPlacement(spotlight, preferred, vw, vh);
     setTooltipStyle(style);
     setTooltipMaxHeight(maxHeight);
-  }, [step]);
+  }, [step, TOUR_STEPS]);
 
   useEffect(() => {
     if (!active) return;
@@ -222,7 +268,8 @@ export function OnboardingTourProvider({ children }: { children: ReactNode }) {
   // Scroll element into center, then recompute
   useEffect(() => {
     if (!active) return;
-    const id = TOUR_STEPS[step]?.targetId;
+    const currentStep = TOUR_STEPS[step];
+    const id = currentStep?.targetId;
     if (!id) return;
     const el = document.getElementById(id);
     if (el) {
@@ -230,7 +277,7 @@ export function OnboardingTourProvider({ children }: { children: ReactNode }) {
       const t = setTimeout(() => computePositions(), 450);
       return () => clearTimeout(t);
     }
-  }, [active, step, computePositions]);
+  }, [active, step, computePositions, TOUR_STEPS]);
 
   // ── Handlers ────────────────────────────────────────────────────────────
 
@@ -251,7 +298,7 @@ export function OnboardingTourProvider({ children }: { children: ReactNode }) {
   }
 
   const currentStep = TOUR_STEPS[step];
-  const isCentered = active && !currentStep?.targetId;
+  const isCentered = active && (!currentStep?.targetId || isFallbackCentered);
   const isLast = step === TOUR_STEPS.length - 1;
   const isFirst = step === 0;
 
