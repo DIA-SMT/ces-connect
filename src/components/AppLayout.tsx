@@ -3,6 +3,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { LogOut } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import VirtualAssistant from '@/components/VirtualAssistant';
 
 const AppLayout = ({ children }: { children: ReactNode }) => {
   const { user, logout } = useAuth();
@@ -61,6 +62,7 @@ const AppLayout = ({ children }: { children: ReactNode }) => {
       </header>
 
       <main className="container py-8">{children}</main>
+      <VirtualAssistant />
     </div>
   );
 };
