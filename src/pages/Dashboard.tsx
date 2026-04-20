@@ -118,6 +118,12 @@ const Dashboard = () => {
     }
   };
 
+  const recentMeetings = useMemo(() => {
+    const upcoming = meetings.filter(m => m.status !== 'completed').sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    const completed = meetings.filter(m => m.status === 'completed').sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    return [...upcoming, ...completed].slice(0, 3);
+  }, [meetings]);
+
   if (isLoading) {
     return (
       <div className="space-y-10 px-2 sm:px-0">
@@ -155,7 +161,54 @@ const Dashboard = () => {
         <p className="text-slate-600 dark:text-white/70 mt-2 text-lg">Gestione reuniones, participantes y aportes colaborativos</p>
       </div>
 
-      <section className="space-y-6">
+      {recentMeetings.length > 0 && (
+        <section className="space-y-4 pt-2">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div className="flex items-center gap-3">
+              <div className="w-1.5 h-8 bg-primary rounded-full" />
+              <h2 className="text-2xl font-bold text-slate-800 dark:text-white">Tus Reuniones</h2>
+            </div>
+            <Button variant="ghost" className="text-primary hover:text-primary hover:bg-primary/5 rounded-xl" onClick={() => navigate('/meetings')}>
+              Ver todas <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
+          </div>
+          <div className="grid gap-3">
+            {recentMeetings.map(m => (
+              <div
+                key={m.id}
+                className="glass-card rounded-2xl cursor-pointer hover:shadow-md transition-all group"
+                onClick={() => navigate(`/meeting/${m.id}`)}
+              >
+                <div className="flex items-center justify-between p-4 sm:px-6">
+                  <div className="space-y-1.5 flex-1">
+                    <p className="font-semibold text-slate-800 dark:text-white text-lg group-hover:text-primary transition-colors">{m.title}</p>
+                    <div className="flex flex-wrap items-center gap-3 text-sm text-slate-600 dark:text-white/70">
+                      <span className="flex items-center gap-1.5 font-medium">
+                        <CalendarDays className="w-4 h-4 text-primary" />
+                        {format(new Date(m.date), "d 'de' MMMM, yyyy", { locale: es })}
+                      </span>
+                      <div className={`glass-pill px-3 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider ${m.status === 'completed' ? 'text-slate-500 bg-slate-100 dark:bg-white/10 dark:text-white/70' : 'text-primary bg-primary/10'}`}>
+                        {m.status === 'completed' ? 'Finalizada' : 'Próxima'}
+                      </div>
+                      {categories.find(c => c.id === m.category) && (
+                        <div className="flex items-center gap-1.5 text-xs font-bold text-slate-500 bg-slate-100/50 dark:bg-white/5 px-2 py-0.5 rounded-md">
+                          <LayoutList className="w-3 h-3" />
+                          {categories.find(c => c.id === m.category)?.title}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center bg-slate-50 dark:bg-white/5 group-hover:bg-primary group-hover:text-white transition-all ml-4">
+                    <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-0.5" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      <section className="space-y-6 pt-4">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3">
             <div className="w-1.5 h-8 bg-accent rounded-full" />
