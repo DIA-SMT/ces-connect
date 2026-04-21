@@ -6,6 +6,16 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import VirtualAssistant from '@/components/VirtualAssistant';
 import { OnboardingTourProvider, useTour } from '@/components/OnboardingTour';
 
+// ── Avatar helpers ─────────────────────────────────────────────────────────
+const AVATAR_COLORS = [
+  '#6366f1', '#8b5cf6', '#ec4899', '#f59e0b',
+  '#10b981', '#3b82f6', '#ef4444', '#14b8a6',
+];
+const getInitials = (name: string) =>
+  name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2);
+const getAvatarColor = (name: string) =>
+  AVATAR_COLORS[name.charCodeAt(0) % AVATAR_COLORS.length];
+
 // ── Inner layout (needs access to useTour inside provider) ────────────────────
 
 const AppLayoutInner = ({ children }: { children: ReactNode }) => {
@@ -56,10 +66,22 @@ const AppLayoutInner = ({ children }: { children: ReactNode }) => {
               <Button variant="ghost" size="sm" onClick={() => navigate('/meetings')}>Reuniones</Button>
               <Button variant="ghost" size="sm" onClick={() => navigate('/participants')}>Participantes</Button>
             </div>
-            <div className="flex flex-col items-end mr-1">
-              <span className="text-sm font-semibold text-foreground hidden sm:block">{user?.name}</span>
-              <span className="text-[10px] text-muted-foreground hidden sm:block">Conectado</span>
-            </div>
+            {/* Avatar → goes to /profile */}
+            <button
+              id="header-avatar-btn"
+              onClick={() => navigate('/profile')}
+              title={`Perfil de ${user?.name}`}
+              className="w-9 h-9 rounded-full overflow-hidden ring-2 ring-primary/30 hover:ring-primary/70 transition-all shadow-md flex-shrink-0 focus:outline-none focus:ring-primary"
+              style={{ background: user?.avatar_url ? 'transparent' : getAvatarColor(user?.name || 'U') }}
+            >
+              {user?.avatar_url ? (
+                <img src={user.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+              ) : (
+                <span className="w-full h-full flex items-center justify-center text-white text-xs font-bold">
+                  {getInitials(user?.name || 'U')}
+                </span>
+              )}
+            </button>
             {/* Tour replay button */}
             <Button
               variant="ghost"
