@@ -1,7 +1,7 @@
 import { ReactNode } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { LogOut, HelpCircle } from 'lucide-react';
+import { LogOut, HelpCircle, Shield } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import VirtualAssistant from '@/components/VirtualAssistant';
 import { OnboardingTourProvider, useTour } from '@/components/OnboardingTour';
@@ -49,14 +49,18 @@ const AppLayoutInner = ({ children }: { children: ReactNode }) => {
               >
                 Reuniones
               </Button>
-              <Button 
-                id="tour-nav-participantes"
-                variant={location.pathname === '/participants' ? 'default' : 'ghost'} 
-                onClick={() => navigate('/participants')}
-                className={`rounded-xl h-9 ${location.pathname === '/participants' ? 'shadow-md shadow-primary/20' : ''}`}
-              >
-                Participantes
-              </Button>
+
+              {user?.role === 'admin' && (
+                <Button
+                  id="nav-admin-users"
+                  variant={location.pathname === '/admin/users' ? 'default' : 'ghost'}
+                  onClick={() => navigate('/admin/users')}
+                  className={`rounded-xl h-9 gap-1.5 ${location.pathname === '/admin/users' ? 'shadow-md shadow-primary/20' : ''}`}
+                >
+                  <Shield className="w-3.5 h-3.5" />
+                  Usuarios
+                </Button>
+              )}
             </nav>
           </div>
 
@@ -64,7 +68,12 @@ const AppLayoutInner = ({ children }: { children: ReactNode }) => {
             <div className="md:hidden flex gap-2">
               <Button variant="ghost" size="sm" onClick={() => navigate('/')}>Comisiones</Button>
               <Button variant="ghost" size="sm" onClick={() => navigate('/meetings')}>Reuniones</Button>
-              <Button variant="ghost" size="sm" onClick={() => navigate('/participants')}>Participantes</Button>
+
+              {user?.role === 'admin' && (
+                <Button variant="ghost" size="sm" onClick={() => navigate('/admin/users')} className="gap-1">
+                  <Shield className="w-3 h-3" />Usuarios
+                </Button>
+              )}
             </div>
             {/* Avatar → goes to /profile */}
             <button
